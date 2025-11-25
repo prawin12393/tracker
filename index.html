@@ -2,137 +2,179 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Target Acquired | Minimal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Target Acquired | Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
                     },
-                    boxShadow: {
-                        'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
-                        'glow': '0 0 15px rgba(16, 185, 129, 0.3)',
+                    colors: {
+                        slate: { 850: '#151e2e' },
+                        dark: { 
+                            bg: '#0f172a', 
+                            surface: '#1e293b', 
+                            border: '#334155' 
+                        }
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     }
                 }
             }
         }
     </script>
     <style>
-        body {
-            background-color: #f8fafc; /* Slate 50 */
-            color: #1e293b; /* Slate 800 */
-        }
-
-        /* Checkbox Animation */
-        .checkbox-ui input:checked + div {
-            background-color: #10b981;
-            border-color: #10b981;
-            transform: scale(1.05);
-        }
-        .checkbox-ui div {
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        /* Smooth Scroll */
-        html { scroll-behavior: smooth; }
+        /* Smooth transitions for theme switching */
+        body { transition: background-color 0.3s, color 0.3s; }
+        .glass-panel { transition: background-color 0.3s, border-color 0.3s; }
         
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+
+        /* Timer Animation */
+        .timer-circle circle { transition: stroke-dashoffset 1s linear; }
+        
+        /* Checkbox Animation */
+        .checkbox-ui input:checked + div { transform: scale(1.05); }
+        .checkbox-ui div { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center">
+<body class="min-h-screen flex flex-col items-center bg-slate-50 text-slate-800 dark:bg-dark-bg dark:text-slate-200 transition-colors duration-300">
 
-    <!-- Sticky Header -->
-    <header class="w-full max-w-2xl sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
-        <div class="px-6 py-4">
-            <div class="flex justify-between items-end mb-3">
-                <div>
-                    <h1 class="text-xl font-black tracking-tighter text-slate-900">TARGET <span class="text-emerald-600">ACQUIRED</span></h1>
-                    <div id="countdown" class="text-xs font-mono text-slate-500 mt-1">Synchronizing...</div>
+    <!-- Sticky Dashboard Header -->
+    <header class="w-full max-w-2xl sticky top-0 z-50 bg-white/90 dark:bg-dark-bg/90 backdrop-blur-md border-b border-slate-200 dark:border-dark-border transition-colors duration-300">
+        <div class="px-4 py-3 md:px-6 md:py-4">
+            
+            <!-- Top Row: Title & Controls -->
+            <div class="flex justify-between items-center mb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="relative group cursor-pointer" onclick="showLevelInfo()">
+                        <div class="w-10 h-10 rounded-xl bg-slate-900 dark:bg-emerald-500 flex items-center justify-center text-white shadow-lg overflow-hidden">
+                            <span class="font-bold font-mono text-sm" id="userLevelDisplay">Lvl 1</span>
+                            <div class="absolute bottom-0 left-0 h-1 bg-emerald-500 dark:bg-white transition-all duration-500" id="levelProgressBar" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-base md:text-lg font-black tracking-tight leading-none uppercase">
+                            Target <span class="text-emerald-600 dark:text-emerald-400">Acquired</span>
+                        </h1>
+                        <div class="flex items-center space-x-2 mt-1">
+                             <span class="text-[10px] font-mono bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-300" id="xpDisplay">0 XP</span>
+                             <span class="text-[10px] font-bold text-orange-500 uppercase tracking-wider" id="streakDisplay">0 Day Streak</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="text-right">
-                    <div class="text-3xl font-bold text-emerald-600 font-mono tracking-tight" id="progressPercent">0%</div>
+                
+                <!-- Controls -->
+                <div class="flex items-center space-x-2">
+                    <button onclick="toggleTheme()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-sun hidden dark:block"></i>
+                    </button>
                 </div>
             </div>
-            <!-- Progress Bar -->
-            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                <div id="progressBar" class="bg-emerald-500 h-2 rounded-full transition-all duration-700 ease-out" style="width: 0%"></div>
+
+            <!-- Heatmap & Progress -->
+            <div class="flex items-end justify-between space-x-4">
+                <!-- Mini Heatmap (Last 14 days) -->
+                <div class="flex space-x-1" id="heatmapContainer">
+                    <!-- Injected via JS -->
+                </div>
+                <!-- Main Progress -->
+                <div class="flex-grow max-w-[150px] text-right">
+                    <div class="text-[10px] uppercase font-bold text-slate-400 mb-1">Total Completion</div>
+                    <div class="h-1.5 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div id="progressBar" class="h-full bg-emerald-500 transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="w-full max-w-2xl px-4 pb-20 mt-8 flex-grow space-y-10">
+    <main class="w-full max-w-2xl px-4 pb-24 mt-6 flex-grow space-y-8">
 
-        <!-- 1. TODAY'S MISSION -->
+        <!-- 1. HERO SECTION (Today) -->
         <section id="heroSection" class="transform transition-all duration-500">
-            <!-- Injected via JS -->
+            <!-- JS Injection -->
         </section>
 
-        <!-- 2. UPCOMING / SCHEDULE -->
-        <section class="space-y-10">
+        <!-- 2. PHASES -->
+        <section class="space-y-6">
             
             <div id="phase1Container">
-                <div class="flex items-center space-x-3 mb-4 border-b border-slate-200 pb-2">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <h3 class="font-bold text-xs uppercase tracking-widest text-slate-500">Phase 1: Foundation</h3>
+                <div class="flex items-center justify-between mb-3 border-b border-slate-200 dark:border-dark-border pb-2">
+                    <h3 class="font-bold text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center">
+                        <i class="fas fa-cubes mr-2"></i> Phase 1: Foundation
+                    </h3>
                 </div>
-                <div id="phase1List" class="space-y-3"></div>
+                <div id="phase1List" class="space-y-2"></div>
             </div>
 
             <div id="phase2Container">
-                <div class="flex items-center space-x-3 mb-4 mt-12 border-b border-slate-200 pb-2">
-                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-                    <h3 class="font-bold text-xs uppercase tracking-widest text-slate-500">Phase 2: Depth & Loops</h3>
+                <div class="flex items-center justify-between mb-3 mt-10 border-b border-slate-200 dark:border-dark-border pb-2">
+                    <h3 class="font-bold text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center">
+                        <i class="fas fa-layer-group mr-2"></i> Phase 2: Deep Dive
+                    </h3>
                 </div>
-                <div id="phase2List" class="space-y-3"></div>
+                <div id="phase2List" class="space-y-2"></div>
             </div>
 
             <div id="phase3Container">
-                <div class="flex items-center space-x-3 mb-4 mt-12 border-b border-slate-200 pb-2">
-                    <span class="w-2 h-2 rounded-full bg-purple-500"></span>
-                    <h3 class="font-bold text-xs uppercase tracking-widest text-slate-500">Phase 3: Mock War</h3>
+                <div class="flex items-center justify-between mb-3 mt-10 border-b border-slate-200 dark:border-dark-border pb-2">
+                    <h3 class="font-bold text-xs uppercase tracking-widest text-slate-500 dark:text-slate-400 flex items-center">
+                        <i class="fas fa-flag-checkered mr-2"></i> Phase 3: Mock War
+                    </h3>
                 </div>
-                <div id="phase3List" class="space-y-3"></div>
+                <div id="phase3List" class="space-y-2"></div>
             </div>
 
         </section>
 
     </main>
 
-    <footer class="py-12 text-slate-400 text-xs text-center font-mono">
-        <p>FOCUS. EXECUTE. REPEAT.</p>
-        <button onclick="resetData()" class="mt-4 hover:text-red-500 transition-colors underline decoration-slate-200 underline-offset-4">Reset System</button>
+    <!-- Footer Tools -->
+    <footer class="w-full max-w-2xl px-6 py-8 border-t border-slate-200 dark:border-dark-border mb-8">
+        <div class="grid grid-cols-2 gap-4 text-center">
+            <button onclick="exportData()" class="p-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+                <i class="fas fa-download mb-1 block text-lg"></i> Backup Data
+            </button>
+            <label class="cursor-pointer p-3 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors block">
+                <i class="fas fa-upload mb-1 block text-lg"></i> Restore Data
+                <input type="file" id="importFile" class="hidden" onchange="importData(this)">
+            </label>
+        </div>
+        <div class="mt-6 text-center">
+             <button onclick="resetData()" class="text-[10px] text-red-400 hover:text-red-500 uppercase tracking-widest font-bold">Factory Reset</button>
+        </div>
     </footer>
 
     <script>
-        // --- DYNAMIC YEAR CALCULATION ---
+        // --- CONFIG ---
+        const STORE_KEY = "target_acquired_elite_v1";
         const todayDate = new Date();
         const currentYear = todayDate.getFullYear();
-        const currentMonth = todayDate.getMonth(); // 0-11
-
+        const currentMonth = todayDate.getMonth(); 
+        
+        // Smart Year Logic
         let START_YEAR, NEXT_YEAR;
-        if (currentMonth < 8) { // Jan to August
-            START_YEAR = currentYear - 1;
-            NEXT_YEAR = currentYear;
-        } else { // Sep to Dec
-            START_YEAR = currentYear;
-            NEXT_YEAR = currentYear + 1;
-        }
+        if (currentMonth < 8) { START_YEAR = currentYear - 1; NEXT_YEAR = currentYear; } 
+        else { START_YEAR = currentYear; NEXT_YEAR = currentYear + 1; }
 
-        // --- DATA ---
         const rawSchedule = [
-            // PHASE 1
-            { d: `${START_YEAR}-11-18`, task: "2025 Set 1", phase: 1 },
+             { d: `${START_YEAR}-11-18`, task: "2025 Set 1", phase: 1 },
             { d: `${START_YEAR}-11-19`, task: "2025 Set 2", phase: 1 },
             { d: `${START_YEAR}-11-20`, task: "2024 Set 1", phase: 1 },
             { d: `${START_YEAR}-11-21`, task: "2024 Set 2", phase: 1 },
@@ -165,8 +207,6 @@
             { d: `${START_YEAR}-12-18`, task: "2012", phase: 1 },
             { d: `${START_YEAR}-12-19`, task: "2011", phase: 1 },
             { d: `${START_YEAR}-12-20`, task: "Grand Revision", phase: 1 },
-
-            // PHASE 2
             { d: `${START_YEAR}-12-21`, task: "SOM + 20 PYQs", phase: 2 },
             { d: `${START_YEAR}-12-22`, task: "Structural analysis + 20 PYQs", phase: 2 },
             { d: `${START_YEAR}-12-23`, task: "RCC + 20 PYQs", phase: 2 },
@@ -181,7 +221,6 @@
             { d: `${NEXT_YEAR}-01-01`, task: "Surveying", phase: 2 },
             { d: `${NEXT_YEAR}-01-02`, task: "Engineering Maths", phase: 2 },
             { d: `${NEXT_YEAR}-01-03`, task: "Aptitude", phase: 2 },
-            // Loop
             { d: `${NEXT_YEAR}-01-04`, task: "PYQ loop (2025)", phase: 2 },
             { d: `${NEXT_YEAR}-01-05`, task: "PYQ loop (2024)", phase: 2 },
             { d: `${NEXT_YEAR}-01-06`, task: "PYQ loop (2023)", phase: 2 },
@@ -194,8 +233,6 @@
             { d: `${NEXT_YEAR}-01-13`, task: "PYQ loop (2016)", phase: 2 },
             { d: `${NEXT_YEAR}-01-14`, task: "PYQ loop (2015)", phase: 2 },
             { d: `${NEXT_YEAR}-01-15`, task: "PYQ loop (2014-11)", phase: 2 },
-
-            // PHASE 3
             { d: `${NEXT_YEAR}-01-16`, task: "Mock1", phase: 3 },
             { d: `${NEXT_YEAR}-01-17`, task: "Analysis Mock 1", phase: 3 },
             { d: `${NEXT_YEAR}-01-18`, task: "Mock2", phase: 3 },
@@ -228,208 +265,382 @@
         ];
 
         // --- STATE ---
-        const STORE_KEY = "target_acquired_minimal_v1";
-        let state = JSON.parse(localStorage.getItem(STORE_KEY)) || { completed: {} };
+        let state = JSON.parse(localStorage.getItem(STORE_KEY)) || { 
+            completed: {}, 
+            notes: {}, 
+            streak: 0, 
+            xp: 0, 
+            theme: 'light' 
+        };
 
-        // --- LOGIC ---
-        function getTodayStr() {
-            const d = new Date();
-            const year = d.getFullYear();
-            const month = String(d.getMonth() + 1).padStart(2, '0');
-            const day = String(d.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+        // --- AUDIO ENGINE (Brown Noise for Focus) ---
+        let audioCtx;
+        let noiseNode;
+        let gainNode;
+        let isAudioPlaying = false;
+
+        function toggleAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+
+            if (isAudioPlaying) {
+                // Stop
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                setTimeout(() => {
+                    noiseNode.disconnect();
+                    isAudioPlaying = false;
+                    document.getElementById('audioBtnIcon').className = "fas fa-headphones";
+                    document.getElementById('audioBtn').classList.remove("text-emerald-500", "animate-pulse");
+                }, 500);
+            } else {
+                // Start Brown Noise Generation
+                const bufferSize = 2 * audioCtx.sampleRate;
+                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                let lastOut = 0;
+                for (let i = 0; i < bufferSize; i++) {
+                    const white = Math.random() * 2 - 1;
+                    output[i] = (lastOut + (0.02 * white)) / 1.02;
+                    lastOut = output[i];
+                    output[i] *= 3.5; // Compensate for gain
+                }
+
+                noiseNode = audioCtx.createBufferSource();
+                noiseNode.buffer = noiseBuffer;
+                noiseNode.loop = true;
+                
+                gainNode = audioCtx.createGain();
+                gainNode.gain.value = 0.05; // Low volume start
+                
+                noiseNode.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                noiseNode.start(0);
+                
+                // Fade in
+                gainNode.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 2);
+                
+                isAudioPlaying = true;
+                document.getElementById('audioBtnIcon').className = "fas fa-volume-up";
+                document.getElementById('audioBtn').classList.add("text-emerald-500", "animate-pulse");
+            }
         }
 
-        function formatDateDisplay(dateStr) {
-            const d = new Date(dateStr);
-            const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return {
-                dayName: days[d.getDay()],
-                dayNum: d.getDate(),
-                month: months[d.getMonth()]
-            };
+        // --- CORE FUNCTIONS ---
+        function getTodayStr() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
         }
 
         function saveState() {
+            calculateStreak();
             localStorage.setItem(STORE_KEY, JSON.stringify(state));
             render();
         }
 
-        function toggleTask(dateStr) {
-            // Standard toggle behavior: check <-> uncheck
-            if (state.completed[dateStr]) {
-                delete state.completed[dateStr];
+        function addXP(amount) {
+            state.xp = (state.xp || 0) + amount;
+            saveState();
+        }
+
+        function getLevel(xp) {
+            // Level formula: Level = sqrt(xp / 100) + 1
+            const level = Math.floor(Math.sqrt(xp / 100)) + 1;
+            const nextLevelXp = Math.pow(level, 2) * 100;
+            const prevLevelXp = Math.pow(level - 1, 2) * 100;
+            const progress = ((xp - prevLevelXp) / (nextLevelXp - prevLevelXp)) * 100;
+            return { level, progress };
+        }
+
+        function toggleTheme() {
+            state.theme = state.theme === 'light' ? 'dark' : 'light';
+            applyTheme();
+            saveState();
+        }
+
+        function applyTheme() {
+            if (state.theme === 'dark') {
+                document.documentElement.classList.add('dark');
             } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function toggleTask(dateStr) {
+            const isNowCompleted = !state.completed[dateStr];
+            if (isNowCompleted) {
                 state.completed[dateStr] = true;
+                addXP(100); // 100 XP per task
+                if (dateStr === getTodayStr()) {
+                    confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#10b981', '#34d399', '#059669'] });
+                }
+            } else {
+                delete state.completed[dateStr];
+                state.xp = Math.max(0, state.xp - 100); // Remove XP
             }
             saveState();
         }
 
+        function saveNote(dateStr, text) {
+            state.notes[dateStr] = text;
+            localStorage.setItem(STORE_KEY, JSON.stringify(state));
+        }
+
+        function calculateStreak() {
+            let streak = 0;
+            const today = getTodayStr();
+            let d = new Date();
+            
+            // Check today first
+            if (state.completed[today]) streak++;
+            else d.setDate(d.getDate() - 1); // If today not done, start check from yesterday
+
+            if (state.completed[today]) d.setDate(d.getDate() - 1); // If today done, check yesterday
+
+            while (true) {
+                const checkStr = d.toISOString().split('T')[0];
+                const isInSchedule = rawSchedule.find(i => i.d === checkStr);
+                if (isInSchedule && state.completed[checkStr]) {
+                    streak++;
+                    d.setDate(d.getDate() - 1);
+                } else {
+                    break;
+                }
+            }
+            state.streak = streak;
+        }
+
+        // --- TIMER ---
+        let timerInterval;
+        let timeLeft = 0;
+        let timerTotal = 0;
+        let isTimerRunning = false;
+
+        function startTimer(minutes) {
+            if (isTimerRunning) {
+                clearInterval(timerInterval);
+                isTimerRunning = false;
+                document.getElementById('timerDisplay').innerText = "00:00";
+                return;
+            }
+            timerTotal = minutes * 60;
+            timeLeft = timerTotal;
+            isTimerRunning = true;
+            updateTimerVisuals();
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerVisuals();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    addXP(minutes === 50 ? 50 : 25); // Bonus XP for focus
+                    alert("Focus Complete! +XP Earned");
+                }
+            }, 1000);
+        }
+
+        function updateTimerVisuals() {
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            document.getElementById('timerDisplay').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            const offset = 113 - (timeLeft / timerTotal) * 113;
+            document.getElementById('timerRing').style.strokeDashoffset = offset;
+        }
+
+        // --- DATA MGMT ---
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state));
+            const node = document.createElement('a');
+            node.setAttribute("href", dataStr);
+            node.setAttribute("download", `target_acquired_backup_${getTodayStr()}.json`);
+            document.body.appendChild(node);
+            node.click();
+            node.remove();
+        }
+
+        function importData(input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (confirm("Overwrite current data with this backup?")) {
+                        state = imported;
+                        saveState();
+                        alert("Restored successfully!");
+                    }
+                } catch(err) {
+                    alert("Invalid file format");
+                }
+            };
+            reader.readAsText(file);
+        }
+
         function resetData() {
-            if(confirm("Reset all progress?")) {
-                state = { completed: {} };
-                saveState();
+            if (confirm("WARNING: This will delete ALL progress, XP, and Notes.")) {
+                localStorage.removeItem(STORE_KEY);
+                location.reload();
             }
         }
 
+        // --- RENDER ---
         function render() {
+            applyTheme();
             const todayStr = getTodayStr();
-            const heroSection = document.getElementById('heroSection');
-            const phase1List = document.getElementById('phase1List');
-            const phase2List = document.getElementById('phase2List');
-            const phase3List = document.getElementById('phase3List');
+            const total = rawSchedule.length;
+            const completed = Object.keys(state.completed).length;
+            const percent = Math.round((completed / total) * 100);
 
-            phase1List.innerHTML = '';
-            phase2List.innerHTML = '';
-            phase3List.innerHTML = '';
+            // Update Header Stats
+            document.getElementById('progressBar').style.width = `${percent}%`;
+            document.getElementById('streakDisplay').innerText = `${state.streak} Day Streak`;
+            document.getElementById('xpDisplay').innerText = `${state.xp || 0} XP`;
+            
+            // Level Logic
+            const lvlData = getLevel(state.xp || 0);
+            document.getElementById('userLevelDisplay').innerText = `Lvl ${lvlData.level}`;
+            document.getElementById('levelProgressBar').style.width = `${lvlData.progress}%`;
 
-            let totalTasks = rawSchedule.length;
-            let completedTasks = Object.keys(state.completed).length;
-            let progress = Math.round((completedTasks / totalTasks) * 100);
+            // Render Heatmap (Last 14 days)
+            const heatmapContainer = document.getElementById('heatmapContainer');
+            heatmapContainer.innerHTML = '';
+            for (let i = 13; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                const dStr = d.toISOString().split('T')[0];
+                const isDone = state.completed[dStr];
+                const color = isDone ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700';
+                heatmapContainer.innerHTML += `<div class="w-1.5 h-6 rounded-full ${color} opacity-${isDone ? '100' : '30'}" title="${dStr}"></div>`;
+            }
 
-            document.getElementById('progressPercent').innerText = `${progress}%`;
-            document.getElementById('progressBar').style.width = `${progress}%`;
-            document.getElementById('countdown').innerText = `${new Date().toDateString()} • ${totalTasks - completedTasks} Tasks Left`;
-
+            // Render Lists
+            const phase1 = document.getElementById('phase1List');
+            const phase2 = document.getElementById('phase2List');
+            const phase3 = document.getElementById('phase3List');
+            const hero = document.getElementById('heroSection');
+            
+            phase1.innerHTML = ''; phase2.innerHTML = ''; phase3.innerHTML = '';
+            
             let heroFound = false;
 
             rawSchedule.forEach(item => {
                 const isCompleted = !!state.completed[item.d];
                 const isToday = item.d === todayStr;
                 const isPast = item.d < todayStr;
-                
                 const [y, m, d] = item.d.split('-').map(Number);
-                const dateObjDate = new Date(y, m - 1, d);
-                const dateObj = {
-                   month: dateObjDate.toLocaleString('default', { month: 'short' }),
-                   dayNum: d
-                };
+                const dateObj = new Date(y, m-1, d);
+                const monthShort = dateObj.toLocaleString('default', { month: 'short' });
+                const note = state.notes[item.d] || "";
 
-                // --- HERO CARD (Today) ---
+                // HERO
                 if (isToday) {
                     heroFound = true;
-                    // White clean card, shadow-lg
-                    // If completed: Green border, green background tint
-                    // If not: White background, slate border
-                    
-                    const heroClasses = isCompleted 
-                        ? "bg-emerald-50 border-2 border-emerald-500 shadow-soft" 
-                        : "bg-white border-2 border-slate-900 shadow-xl";
-                    
-                    const btnClasses = isCompleted 
-                        ? "bg-emerald-500 border-emerald-500 text-white" 
-                        : "bg-white border-slate-300 text-white hover:border-emerald-500";
+                    const cardClass = isCompleted 
+                        ? "bg-gradient-to-br from-emerald-500 to-emerald-600 border-transparent text-white shadow-lg" 
+                        : "bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border text-slate-800 dark:text-white shadow-xl";
 
-                    heroSection.innerHTML = `
-                        <div class="rounded-2xl p-8 relative overflow-hidden transition-colors duration-300 ${heroClasses}">
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                <div>
-                                    <div class="flex items-center space-x-2 mb-3">
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${isCompleted ? 'bg-emerald-200 text-emerald-800' : 'bg-slate-100 text-slate-600'}">
-                                            Today's Mission
+                    hero.innerHTML = `
+                        <div class="relative rounded-3xl p-6 md:p-8 border ${cardClass} transition-all duration-300 overflow-hidden">
+                            <div class="relative z-10 flex flex-col md:flex-row justify-between gap-6">
+                                <div class="flex-grow">
+                                    <div class="flex items-center space-x-2 mb-2">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-black/10 dark:bg-white/10 backdrop-blur-sm">
+                                            ${monthShort} ${d} • Phase ${item.phase}
                                         </span>
-                                        <span class="text-xs text-slate-400 font-mono">${dateObj.month} ${dateObj.dayNum}</span>
                                     </div>
-                                    <h2 class="text-3xl md:text-4xl font-black ${isCompleted ? 'text-emerald-800' : 'text-slate-900'} tracking-tight leading-none mb-1">
-                                        ${item.task}
-                                    </h2>
-                                    <p class="text-sm font-semibold tracking-wide uppercase ${isCompleted ? 'text-emerald-600' : 'text-slate-400'}">Phase ${item.phase}</p>
+                                    <h2 class="text-3xl font-black leading-tight mb-4">${item.task}</h2>
+                                    
+                                    <!-- Tools -->
+                                    <div class="flex items-center space-x-3">
+                                        <!-- Audio Toggle -->
+                                        <button id="audioBtn" onclick="toggleAudio()" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700/50 flex items-center justify-center text-slate-500 dark:text-slate-300 hover:scale-105 transition-transform">
+                                            <i id="audioBtnIcon" class="fas fa-headphones"></i>
+                                        </button>
+                                        <!-- Timer -->
+                                        <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-700/50 px-3 py-2 rounded-xl">
+                                            <div class="relative w-6 h-6">
+                                                 <svg class="transform -rotate-90 w-6 h-6"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="transparent" class="text-slate-300 dark:text-slate-600"></circle><circle id="timerRing" class="timer-circle text-emerald-500" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="transparent" stroke-dasharray="63" stroke-dashoffset="0"></circle></svg>
+                                            </div>
+                                            <span class="font-mono font-bold text-sm" id="timerDisplay">00:00</span>
+                                            <button onclick="startTimer(25)" class="text-[10px] font-bold uppercase px-2 py-1 bg-white dark:bg-slate-600 rounded shadow-sm hover:text-emerald-500">25m</button>
+                                        </div>
+                                    </div>
                                 </div>
-
-                                <label class="checkbox-ui cursor-pointer relative flex-shrink-0">
-                                    <input type="checkbox" class="sr-only" 
-                                        ${isCompleted ? 'checked' : ''} 
-                                        onchange="toggleTask('${item.d}')">
-                                    <div class="w-16 h-16 rounded-xl border-2 flex items-center justify-center shadow-sm ${btnClasses}">
-                                        <i class="fas fa-check text-2xl ${isCompleted ? 'block' : 'hidden'}"></i>
+                                
+                                <!-- Checkbox -->
+                                <label class="checkbox-ui cursor-pointer flex-shrink-0 self-start md:self-center">
+                                    <input type="checkbox" class="sr-only" ${isCompleted ? 'checked' : ''} onchange="toggleTask('${item.d}')">
+                                    <div class="w-16 h-16 rounded-2xl border-2 flex items-center justify-center text-white text-2xl shadow-inner ${isCompleted ? 'bg-white/20 border-white/40' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-600 hover:border-emerald-500'}">
+                                        <i class="fas fa-check ${isCompleted ? 'block' : 'hidden'}"></i>
                                     </div>
                                 </label>
                             </div>
-                            ${isCompleted 
-                                ? '<div class="mt-6 text-center text-xs font-bold font-mono text-emerald-600 uppercase tracking-widest">Target Neutralized</div>' 
-                                : ''}
+
+                            <!-- Notes Area -->
+                            <div class="mt-6 pt-4 border-t ${isCompleted ? 'border-white/20' : 'border-slate-100 dark:border-slate-700'}">
+                                <input type="text" 
+                                    class="w-full bg-transparent outline-none text-sm placeholder-opacity-50 ${isCompleted ? 'text-white placeholder-white' : 'text-slate-600 dark:text-slate-300 placeholder-slate-400'}"
+                                    placeholder="Add daily notes or error log..."
+                                    value="${note}"
+                                    oninput="saveNote('${item.d}', this.value)"
+                                >
+                            </div>
                         </div>
                     `;
                 }
 
-                // --- LIST ITEMS ---
-                // Minimal white list
-                // If Completed: Green-50 background, Green border, Green Text
-                // If Overdue: Red-50 background, Red Border
-                // Default: White background, gray border
+                // LIST ITEMS
+                if (!isToday) {
+                    let rowClass = "flex items-center p-3 rounded-xl border transition-all ";
+                    let textClass = "font-medium text-sm ";
+                    
+                    if (isCompleted) {
+                        rowClass += "bg-slate-50 dark:bg-slate-800/50 border-transparent opacity-60";
+                        textClass += "text-slate-400 line-through";
+                    } else if (isPast) {
+                        rowClass += "bg-red-50 dark:bg-red-900/10 border-red-100 dark:border-red-900/30";
+                        textClass += "text-red-700 dark:text-red-400";
+                    } else {
+                        rowClass += "bg-white dark:bg-dark-surface border-slate-200 dark:border-dark-border hover:border-emerald-400 dark:hover:border-emerald-600";
+                        textClass += "text-slate-700 dark:text-slate-200";
+                    }
 
-                let rowClass = "flex items-center justify-between p-4 rounded-xl border transition-all duration-200 ";
-                let textClass = "font-medium text-slate-700";
-                let dateClass = "text-slate-400";
-                let checkClass = "bg-white border-slate-300 hover:border-emerald-400";
-
-                if (isToday) {
-                    rowClass += "bg-white border-slate-900 shadow-md transform scale-[1.01] my-4 ring-4 ring-slate-100";
-                    textClass = "font-bold text-slate-900";
-                    dateClass = "text-emerald-600 font-bold";
-                } else if (isCompleted) {
-                    rowClass += "bg-emerald-50/50 border-emerald-200";
-                    textClass = "text-slate-400 line-through decoration-emerald-500/50";
-                    dateClass = "text-emerald-400/50";
-                    checkClass = "bg-emerald-500 border-emerald-500";
-                } else if (isPast) {
-                    rowClass += "bg-red-50/50 border-red-200";
-                    textClass = "text-red-900";
-                    dateClass = "text-red-400";
-                } else {
-                    rowClass += "bg-white border-slate-200 hover:border-slate-300";
-                }
-
-                const html = `
-                    <div class="${rowClass}" id="item-${item.d}">
-                        <div class="flex items-center space-x-5">
-                            <div class="flex flex-col items-center justify-center w-10 text-center leading-none ${dateClass}">
-                                <span class="text-[10px] font-bold uppercase tracking-wider">${dateObj.month}</span>
-                                <span class="text-xl font-bold">${dateObj.dayNum}</span>
+                    const html = `
+                        <div class="${rowClass}">
+                            <div class="w-12 text-center flex-shrink-0 mr-3">
+                                <div class="text-[10px] font-bold uppercase text-slate-400">${monthShort}</div>
+                                <div class="text-lg font-bold leading-none ${isPast && !isCompleted ? 'text-red-500' : 'text-slate-700 dark:text-slate-300'}">${d}</div>
                             </div>
-                            <div>
-                                <div class="${textClass}">${item.task}</div>
-                                ${isPast && !isCompleted ? '<div class="text-[10px] text-red-500 font-bold uppercase tracking-wider mt-0.5">Overdue</div>' : ''}
+                            <div class="flex-grow min-w-0">
+                                <div class="truncate ${textClass}">${item.task}</div>
+                                ${isPast && !isCompleted ? '<div class="text-[9px] font-bold text-red-500 uppercase tracking-wider">Overdue</div>' : ''}
                             </div>
+                            <label class="checkbox-ui cursor-pointer p-2">
+                                <input type="checkbox" class="sr-only" ${isCompleted ? 'checked' : ''} onchange="toggleTask('${item.d}')">
+                                <div class="w-5 h-5 rounded border flex items-center justify-center text-white text-xs ${isCompleted ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300 dark:border-slate-600 hover:border-emerald-400'}">
+                                    <i class="fas fa-check ${isCompleted ? 'block' : 'hidden'}"></i>
+                                </div>
+                            </label>
                         </div>
-                        <label class="checkbox-ui cursor-pointer p-1">
-                             <input type="checkbox" class="sr-only" 
-                                ${isCompleted ? 'checked' : ''} 
-                                onchange="toggleTask('${item.d}')">
-                            <div class="w-6 h-6 rounded border flex items-center justify-center text-white ${checkClass}">
-                                <i class="fas fa-check text-[10px] ${isCompleted ? 'block' : 'hidden'}"></i>
-                            </div>
-                        </label>
-                    </div>
-                `;
-
-                if (item.phase === 1) phase1List.innerHTML += html;
-                if (item.phase === 2) phase2List.innerHTML += html;
-                if (item.phase === 3) phase3List.innerHTML += html;
-
+                    `;
+                    
+                    if (item.phase === 1) phase1.innerHTML += html;
+                    if (item.phase === 2) phase2.innerHTML += html;
+                    if (item.phase === 3) phase3.innerHTML += html;
+                }
             });
 
-            if (!heroFound) {
-                 heroSection.innerHTML = `
-                    <div class="bg-white rounded-2xl p-8 text-center border-2 border-dashed border-slate-300">
-                        <h2 class="text-2xl font-bold text-slate-800 mb-2">Rest Day</h2>
-                        <p class="text-slate-500 text-sm">No missions scheduled for today.</p>
-                    </div>
-                `;
-            }
+            if (!heroFound) hero.innerHTML = `<div class="p-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl"><h2 class="font-bold text-slate-600 dark:text-slate-300">Rest Day</h2><p class="text-sm text-slate-400">Recharge for the next mission.</p></div>`;
         }
 
+        // Init
+        calculateStreak();
         render();
-
-        setTimeout(() => {
-            const todayStr = getTodayStr();
-            const el = document.getElementById(`item-${todayStr}`);
-            if(el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-        }, 500);
-
     </script>
 </body>
 </html>
